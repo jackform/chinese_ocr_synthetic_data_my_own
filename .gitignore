@@ -1,0 +1,15 @@
+#Aug_Operations.py
+#char_std_5990_top_5.txt
+#characters_top_5.txt
+checkpoints/*
+data/*
+dataloader/
+#main.py
+#metrics.py
+#models/
+#synthetic_data.py
+test.py
+test/*
+#util/
+#utils.py
+__pycache__/*
