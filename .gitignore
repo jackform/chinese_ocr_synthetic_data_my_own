@@ -3,7 +3,7 @@
 #characters_top_5.txt
 checkpoints/*
 data/*
-dataloader/
+#dataloader/
 #main.py
 #metrics.py
 #models/
