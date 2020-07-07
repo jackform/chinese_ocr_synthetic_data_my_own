@@ -145,15 +145,22 @@ def shrink(bboxes, rate, max_shr=20):
 
 
 class ReCTSDataLoader(data.Dataset):
-    def __init__(self, need_transform=False, img_size=224, kernel_num=7, min_scale=0.4):
+    def __init__(self, need_transform=False, img_size=224, kernel_num=7, min_scale=0.4, train_data_dir=None, train_gt_dir=None):
         self.need_transform = need_transform
 
         self.img_size = img_size if isinstance(img_size, tuple) else (img_size, img_size)
         self.kernel_num = kernel_num
         self.min_scale = min_scale
 
-        data_dirs = [ctw_train_data_dir]
-        gt_dirs = [ctw_train_gt_dir]
+        if train_data_dir is None and train_gt_dir is None:
+            self.ctw_train_data_dir = ctw_train_data_dir
+            self.ctw_train_gt_dir = ctw_train_gt_dir
+        else:
+            self.ctw_train_data_dir = train_data_dir
+            self.ctw_train_gt_dir = train_gt_dir
+
+        data_dirs = [self.ctw_train_data_dir]
+        gt_dirs = [self.ctw_train_gt_dir]
 
         self.img_paths = []
         self.gt_paths = []

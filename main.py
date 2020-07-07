@@ -185,7 +185,7 @@ def adjust_learning_rate(schedule, lr, optimizer, epoch):
     if epoch in schedule:
         lr = lr * 0.1
         for param_group in optimizer.param_groups:
-            param_group['lr'] = args.lr
+            param_group['lr'] = lr
     return lr
 
 
@@ -194,36 +194,68 @@ def save_checkpoint(state, checkpoint='checkpoint', filename='checkpoint.pth.tar
     torch.save(state, filepath)
 
 
-def main(args):
-    if args.checkpoint == '':
-        args.checkpoint = "checkpoints/ctw1500_%s_bs_%d_ep_%d" % (args.arch, args.batch_size, args.n_epoch)
+def main():
+    # parser = argparse.ArgumentParser(description='Hyperparams')
+    # parser.add_argument('--arch', nargs='?', type=str, default='resnet50')
+    # parser.add_argument('--img_size', nargs='?', type=int, default=640,
+    #                     help='Height of the input image')
+    # parser.add_argument('--n_epoch', nargs='?', type=int, default=600,
+    #                     help='# of the epochs')
+    # parser.add_argument('--schedule', type=int, nargs='+', default=[200, 400],
+    #                     help='Decrease learning rate at these epochs.')
+    # parser.add_argument('--batch_size', nargs='?', type=int, default=1,
+    #                     help='Batch Size')
+    # parser.add_argument('--lr', nargs='?', type=float, default=1e-3,
+    #                     help='Learning Rate')
+    # parser.add_argument('--resume', nargs='?', type=str, default=None,
+    #                     help='Path to previous saved model to restart from')
+    # parser.add_argument('--checkpoint', default='', type=str, metavar='PATH',
+    #                     help='path to save checkpoint (default: checkpoint)')
+    # args = parser.parse_args()
 
+    # lr = args.lr
+    # schedule = args.schedule
+    # batch_size = args.batch_size
+    # n_epoch = args.n_epoch
+    # image_size = args.img_size
+    # resume = args.resume
+    # checkpoint_path = args.checkpoint
+    # arch = args.arch
 
+    lr = 1e-3
+    schedule = [200, 400]
+    batch_size = 1
+    n_epoch = 600
+    image_size = 640
+    resume = None
+    checkpoint_path = ''
+    arch = 'resnet50'
 
-    print('checkpoint path: %s' % args.checkpoint)
-    print('init lr: %.8f' % args.lr)
-    print('schedule: ', args.schedule)
+    if checkpoint_path == '':
+        checkpoint_path = "checkpoints/ctw1500_%s_bs_%d_ep_%d" % (arch, batch_size, n_epoch)
+
+    print('checkpoint path: %s' % checkpoint_path)
+    print('init lr: %.8f' % lr)
+    print('schedule: ', schedule)
     sys.stdout.flush()
 
-    if not os.path.isdir(args.checkpoint):
-        os.makedirs(args.checkpoint)
+    if not os.path.isdir(checkpoint_path):
+        os.makedirs(checkpoint_path)
 
     kernel_num = 7
     min_scale = 0.4
     start_epoch = 0
 
-    lr = args.lr
-    schedule = args.schedule
-    batch_size = args.batch_size
-    n_epoch = args.n_epoch
-    image_size = args.img_size
-    resume = args.resume
-    checkpoint_path = args.checkpoint
-
     data_loader = ReCTSDataLoader(need_transform=True,
                                   img_size=image_size,
                                   kernel_num=kernel_num,
-                                  min_scale=min_scale)
+                                  min_scale=min_scale,
+                                  train_data_dir='data/ReCTS/img/',
+                                  train_gt_dir='data/ReCTS/gt/'
+                                  )
+
+    ctw_root_dir = 'data/'
+
     train_loader = torch.utils.data.DataLoader(
         data_loader,
         batch_size=batch_size,
@@ -232,11 +264,11 @@ def main(args):
         drop_last=True,
         pin_memory=True)
 
-    if args.arch == "resnet50":
+    if arch == "resnet50":
         model = models.resnet50(pretrained=False, num_classes=kernel_num)
-    elif args.arch == "resnet101":
+    elif arch == "resnet101":
         model = models.resnet101(pretrained=False, num_classes=kernel_num)
-    elif args.arch == "resnet152":
+    elif arch == "resnet152":
         model = models.resnet152(pretrained=False, num_classes=kernel_num)
 
     # model = torch.nn.DataParallel(model).cuda()
@@ -276,24 +308,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Hyperparams')
-    parser.add_argument('--arch', nargs='?', type=str, default='resnet50')
-    parser.add_argument('--img_size', nargs='?', type=int, default=640,
-                        help='Height of the input image')
-    parser.add_argument('--n_epoch', nargs='?', type=int, default=600,
-                        help='# of the epochs')
-    parser.add_argument('--schedule', type=int, nargs='+', default=[200, 400],
-                        help='Decrease learning rate at these epochs.')
-    parser.add_argument('--batch_size', nargs='?', type=int, default=1,
-                        help='Batch Size')
-    parser.add_argument('--lr', nargs='?', type=float, default=1e-3,
-                        help='Learning Rate')
-    parser.add_argument('--resume', nargs='?', type=str, default=None,
-                        help='Path to previous saved model to restart from')
-    parser.add_argument('--checkpoint', default='', type=str, metavar='PATH',
-                        help='path to save checkpoint (default: checkpoint)')
-    args = parser.parse_args()
-
-    main(args)
+    main()
 
 # parser = argparse.ArgumentParser(description='Hyperparams')
