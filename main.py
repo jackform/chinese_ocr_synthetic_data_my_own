@@ -9,6 +9,7 @@ import os
 
 from metrics import runningScore
 import models
+from models.fpn import PSENet
 from util import Logger, AverageMeter
 import time
 
@@ -102,7 +103,7 @@ def cal_kernel_score(kernels, gt_kernels, gt_texts, training_masks, running_metr
     return score_kernel
 
 
-def train(train_loader, model, criterion, optimizer, epoch):
+def train(train_loader, model, criterion, optimizer, epoch, lr, checkpoint_path):
     model.train()
 
     batch_time = AverageMeter()
@@ -115,21 +116,24 @@ def train(train_loader, model, criterion, optimizer, epoch):
     for batch_idx, (imgs, gt_texts, gt_kernels, training_masks) in enumerate(train_loader):
         data_time.update(time.time() - end)
 
-        # imgs = Variable(imgs.cuda())
-        # gt_texts = Variable(gt_texts.cuda())
-        # gt_kernels = Variable(gt_kernels.cuda())
-        # training_masks = Variable(training_masks.cuda())
-        imgs = Variable(imgs)
-        gt_texts = Variable(gt_texts)
-        gt_kernels = Variable(gt_kernels)
-        training_masks = Variable(training_masks)
+        if torch.cuda.is_available():
+            imgs = Variable(imgs.cuda())
+            gt_texts = Variable(gt_texts.cuda())
+            gt_kernels = Variable(gt_kernels.cuda())
+            training_masks = Variable(training_masks.cuda())
+        else:
+            imgs = Variable(imgs)
+            gt_texts = Variable(gt_texts)
+            gt_kernels = Variable(gt_kernels)
+            training_masks = Variable(training_masks)
 
         outputs = model(imgs)
         texts = outputs[:, 0, :, :]
         kernels = outputs[:, 1:, :, :]
 
         selected_masks = ohem_batch(texts, gt_texts, training_masks)
-        # selected_masks = Variable(selected_masks.cuda())
+        if torch.cuda.is_available():
+            selected_masks = Variable(selected_masks.cuda())
         selected_masks = Variable(selected_masks)
 
         loss_text = criterion(texts, gt_texts, selected_masks)
@@ -139,7 +143,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
         mask1 = training_masks.data.cpu().numpy()
         selected_masks = ((mask0 > 0.5) & (mask1 > 0.5)).astype('float32')
         selected_masks = torch.from_numpy(selected_masks).float()
-        # selected_masks = Variable(selected_masks.cuda())
+        if torch.cuda.is_available():
+            selected_masks = Variable(selected_masks.cuda())
         selected_masks = Variable(selected_masks)
         for i in range(6):
             kernel_i = kernels[:, i, :, :]
@@ -175,6 +180,12 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 iou_k=score_kernel['Mean IoU'])
             print(output_log)
             sys.stdout.flush()
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'state_dict': model.state_dict(),
+                'lr': lr,
+                'optimizer': optimizer.state_dict(),
+            }, checkpoint=checkpoint_path)
 
     return (
         losses.avg, score_text['Mean Acc'], score_kernel['Mean Acc'], score_text['Mean IoU'], score_kernel['Mean IoU'])
@@ -190,6 +201,7 @@ def adjust_learning_rate(schedule, lr, optimizer, epoch):
 
 
 def save_checkpoint(state, checkpoint='checkpoint', filename='checkpoint.pth.tar'):
+    print("save checkpoint path: %s" % filename)
     filepath = os.path.join(checkpoint, filename)
     torch.save(state, filepath)
 
@@ -229,7 +241,8 @@ def main():
     image_size = 640
     resume = None
     checkpoint_path = ''
-    arch = 'resnet50'
+    # arch = 'resnet50'
+    arch = 'mobilenetV2'
 
     if checkpoint_path == '':
         checkpoint_path = "checkpoints/ctw1500_%s_bs_%d_ep_%d" % (arch, batch_size, n_epoch)
@@ -250,8 +263,10 @@ def main():
                                   img_size=image_size,
                                   kernel_num=kernel_num,
                                   min_scale=min_scale,
-                                  train_data_dir='data/ReCTS/img/',
-                                  train_gt_dir='data/ReCTS/gt/'
+                                  # train_data_dir='data/ReCTS/img/',
+                                  # train_gt_dir='data/ReCTS/gt/'
+                                  train_data_dir='../ocr_data/ReCTS/img/',
+                                  train_gt_dir='../ocr_data/ReCTS/gt/'
                                   )
 
     ctw_root_dir = 'data/'
@@ -270,9 +285,14 @@ def main():
         model = models.resnet101(pretrained=False, num_classes=kernel_num)
     elif arch == "resnet152":
         model = models.resnet152(pretrained=False, num_classes=kernel_num)
+    elif arch == "mobilenetV2":
+        model = PSENet(backbone="mobilenetv2", pretrained=False, result_num=kernel_num, scale=1)
 
-    # model = torch.nn.DataParallel(model).cuda()
-    model = torch.nn.DataParallel(model)
+
+    if torch.cuda.is_available():
+        model = torch.nn.DataParallel(model).cuda()
+    else:
+        model = torch.nn.DataParallel(model)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.99, weight_decay=5e-4)
 
@@ -295,13 +315,7 @@ def main():
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, n_epoch, optimizer.param_groups[0]['lr']))
 
         train_loss, train_te_acc, train_ke_acc, train_te_iou, train_ke_iou = train(train_loader, model, dice_loss,
-                                                                                   optimizer, epoch)
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'state_dict': model.state_dict(),
-            'lr': lr,
-            'optimizer': optimizer.state_dict(),
-        }, checkpoint=checkpoint_path)
+                                                                                   optimizer, epoch, lr, checkpoint_path)
 
         logger.append([optimizer.param_groups[0]['lr'], train_loss, train_te_acc, train_te_iou])
     logger.close()
