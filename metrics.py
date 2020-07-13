@@ -12,12 +12,14 @@ class runningScore(object):
 
     def _fast_hist(self, label_true, label_pred, n_class):
         mask = (label_true >= 0) & (label_true < n_class)
+        mask_true = (label_true >= 0) & (label_true < n_class)
+        mask_pred = (label_pred >= 0) & (label_pred < n_class)
 
-        if np.sum((label_pred[mask] < 0)) > 0:
+        if np.sum((label_pred[mask_pred] < 0)) > 0:
             print(label_pred[label_pred < 0])
         hist = np.bincount(
-            n_class * label_true[mask].astype(int) +
-            label_pred[mask], minlength=n_class ** 2).reshape(n_class, n_class)
+            n_class * label_true[mask_true].astype(int) +
+            label_pred[mask_pred], minlength=n_class ** 2).reshape(n_class, n_class)
         return hist
 
     def update(self, label_trues, label_preds):

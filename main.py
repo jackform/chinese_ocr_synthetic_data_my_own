@@ -1,6 +1,6 @@
+import shutil
 import sys
 import torch
-import argparse
 import numpy as np
 
 from torch.autograd import Variable
@@ -14,6 +14,8 @@ from util import Logger, AverageMeter
 import time
 
 from dataloader.rects_data_loader import ReCTSDataLoader
+
+from torchstat import stat
 
 
 def ohem_single(score, gt_text, training_mask):
@@ -127,6 +129,7 @@ def train(train_loader, model, criterion, optimizer, epoch, lr, checkpoint_path)
             gt_kernels = Variable(gt_kernels)
             training_masks = Variable(training_masks)
 
+        # outputs size = (batch_size, kernel_num, image_size, image_size) default: (16, 7, 640, 640)
         outputs = model(imgs)
         texts = outputs[:, 0, :, :]
         kernels = outputs[:, 1:, :, :]
@@ -166,9 +169,10 @@ def train(train_loader, model, criterion, optimizer, epoch, lr, checkpoint_path)
         batch_time.update(time.time() - end)
         end = time.time()
 
-        # if batch_idx % 20 == 0:
-        if True:
-            output_log = '({batch}/{size}) Batch: {bt:.3f}s | TOTAL: {total:.0f}min | ETA: {eta:.0f}min | Loss: {loss:.4f} | Acc_t: {acc: .4f} | IOU_t: {iou_t: .4f} | IOU_k: {iou_k: .4f}'.format(
+        if batch_idx % 20 == 0:
+            # if True:
+            output_log = '({batch}/{size}) Batch: {bt:.3f}s | TOTAL: {total:.0f}min | ETA: {eta:.0f}min | Loss: {' \
+                         'loss:.4f} | Acc_t: {acc: .4f} | IOU_t: {iou_t: .4f} | IOU_k: {iou_k: .4f}'.format(
                 batch=batch_idx + 1,
                 size=len(train_loader),
                 bt=batch_time.avg,
@@ -180,12 +184,6 @@ def train(train_loader, model, criterion, optimizer, epoch, lr, checkpoint_path)
                 iou_k=score_kernel['Mean IoU'])
             print(output_log)
             sys.stdout.flush()
-            save_checkpoint({
-                'epoch': epoch + 1,
-                'state_dict': model.state_dict(),
-                'lr': lr,
-                'optimizer': optimizer.state_dict(),
-            }, checkpoint=checkpoint_path)
 
     return (
         losses.avg, score_text['Mean Acc'], score_kernel['Mean Acc'], score_text['Mean IoU'], score_kernel['Mean IoU'])
@@ -236,16 +234,18 @@ def main():
 
     lr = 1e-3
     schedule = [200, 400]
-    batch_size = 1
-    n_epoch = 600
+    batch_size = 16
+    # batch_size = 1
+    n_epoch = 100
     image_size = 640
-    resume = None
     checkpoint_path = ''
     # arch = 'resnet50'
     arch = 'mobilenetV2'
+    resume = "checkpoints/ReCTS_%s_bs_%d_ep_%d" % (arch, batch_size, 5)
+    # resume = None
 
     if checkpoint_path == '':
-        checkpoint_path = "checkpoints/ctw1500_%s_bs_%d_ep_%d" % (arch, batch_size, n_epoch)
+        checkpoint_path = "checkpoints/ReCTS_%s_bs_%d_ep_%d" % (arch, batch_size, n_epoch)
 
     print('checkpoint path: %s' % checkpoint_path)
     print('init lr: %.8f' % lr)
@@ -263,10 +263,10 @@ def main():
                                   img_size=image_size,
                                   kernel_num=kernel_num,
                                   min_scale=min_scale,
-                                  # train_data_dir='data/ReCTS/img/',
-                                  # train_gt_dir='data/ReCTS/gt/'
                                   train_data_dir='../ocr_data/ReCTS/img/',
                                   train_gt_dir='../ocr_data/ReCTS/gt/'
+                                  # train_data_dir='/kaggle/input/rects-ocr/img/',
+                                  # train_gt_dir='/kaggle/input/rects-ocr/gt/'
                                   )
 
     ctw_root_dir = 'data/'
@@ -288,22 +288,26 @@ def main():
     elif arch == "mobilenetV2":
         model = PSENet(backbone="mobilenetv2", pretrained=False, result_num=kernel_num, scale=1)
 
-
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model).cuda()
+        device = 'cuda'
     else:
         model = torch.nn.DataParallel(model)
+        device = 'cpu'
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.99, weight_decay=5e-4)
 
     title = 'ReCTS'
     if resume:
         print('Resuming from checkpoint.')
-        assert os.path.isfile(resume), 'Error: no checkpoint directory found!'
-        checkpoint = torch.load(resume)
+        checkpoint_file_path = os.path.join(resume, "checkpoint.pth.tar")
+        assert os.path.isfile(checkpoint_file_path), 'Error: no checkpoint directory: %s found!' % checkpoint_file_path
+
+        checkpoint = torch.load(checkpoint_file_path, map_location=torch.device(device))
         start_epoch = checkpoint['epoch']
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
+        shutil.copy(os.path.join(resume, 'log.txt'), os.path.join(checkpoint_path, 'log.txt'))
         logger = Logger(os.path.join(checkpoint_path, 'log.txt'), title=title, resume=True)
     else:
         print('Training from scratch.')
@@ -314,8 +318,17 @@ def main():
         lr = adjust_learning_rate(schedule, lr, optimizer, epoch)
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, n_epoch, optimizer.param_groups[0]['lr']))
 
+        stat(model, (3, image_size, image_size))
+
         train_loss, train_te_acc, train_ke_acc, train_te_iou, train_ke_iou = train(train_loader, model, dice_loss,
-                                                                                   optimizer, epoch, lr, checkpoint_path)
+                                                                                   optimizer, epoch, lr,
+                                                                                   checkpoint_path)
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            'lr': lr,
+            'optimizer': optimizer.state_dict(),
+        }, checkpoint=checkpoint_path)
 
         logger.append([optimizer.param_groups[0]['lr'], train_loss, train_te_acc, train_te_iou])
     logger.close()
