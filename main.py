@@ -28,6 +28,7 @@ def ohem_single(score, gt_text, training_mask):
         return selected_mask
 
     neg_num = (int)(np.sum(gt_text <= 0.5))
+    # neg_num保证是 小于等于pos_num的3倍
     neg_num = (int)(min(pos_num * 3, neg_num))
 
     if neg_num == 0:
@@ -35,11 +36,16 @@ def ohem_single(score, gt_text, training_mask):
         selected_mask = selected_mask.reshape(1, selected_mask.shape[0], selected_mask.shape[1]).astype('float32')
         return selected_mask
 
+    # 修改正反例的threshold(neg_num与pos_num的比例是3:1, 在之前的threshold判断出的负例中，排序选中概率最低（保证小于等于pos_num3倍）的样本
     neg_score = score[gt_text <= 0.5]
     neg_score_sorted = np.sort(-neg_score)
     threshold = -neg_score_sorted[neg_num - 1]
 
+    # selected_mask用于后续与pred_gt_text和gt_text 与计算 后再计算IoU
+    # 原先为training_mask全为1，
+    # score >= threshold表明在neg_num和pos_num的比例大于3时，会直接先剃除neg中概率低的（数量为pos_num的3倍）
     selected_mask = ((score >= threshold) | (gt_text > 0.5)) & (training_mask > 0.5)
+    # OHEM（online hard example mining)，其实应该算是一种思想，在线困难样本挖掘，即根据loss的大小，选择有较大loss的像素反向传播，较小loss的像素梯度为0。
     selected_mask = selected_mask.reshape(1, selected_mask.shape[0], selected_mask.shape[1]).astype('float32')
     return selected_mask
 
@@ -51,6 +57,8 @@ def ohem_batch(scores, gt_texts, training_masks):
 
     selected_masks = []
     for i in range(scores.shape[0]):
+        # 对于每张图，一般情况下，有正例和负例，一般一张图上的负例的数量都会比正例的多得多（图片中负例较多）
+        # 训练时候，只取出那些预测为负例概率最低的位置的负例样本作为这张图上的负例（使得正负比例1：3）
         selected_masks.append(ohem_single(scores[i, :, :], gt_texts[i, :, :], training_masks[i, :, :]))
 
     selected_masks = np.concatenate(selected_masks, 0)

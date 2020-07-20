@@ -10,6 +10,7 @@ data/*
 #synthetic_data.py
 test.py
 test/*
+outputs/*
 #util/
 #utils.py
 __pycache__/*
