@@ -10,28 +10,30 @@ import dataloader.utils as utils
 import dataloader.textline_dataset as dataset
 
 import models.seq2seq as crnn
+from parser import crnn_parser
 
 cudnn.benchmark = True
 
-parser = argparse.ArgumentParser()
+# parser = argparse.ArgumentParser()
+cfg = crnn_parser()
 # parser.add_argument('--train_list', type=str, default='data/train_data_index.txt', help='path to train dataset list file')
-parser.add_argument('--train_list', type=str, default='../ocr_data/ocr_syn_text/image_text_index.txt', help='path to train dataset list file')
-parser.add_argument('--eval_list', type=str, default='',  help='path to evalation dataset list file')
-parser.add_argument('--num_workers', type=int, default=4, help='number of data loading num_workers')
-parser.add_argument('--batch_size', type=int, default=16, help='input batch size')
-parser.add_argument('--img_height', type=int, default=32, help='the height of the input image to network')
-parser.add_argument('--img_width', type=int, default=280, help='the width of the input image to network')
-parser.add_argument('--hidden_size', type=int, default=256, help='size of the lstm hidden state')
-parser.add_argument('--num_epochs', type=int, default=100, help='number of epochs to train for')
-parser.add_argument('--learning_rate', type=float, default=0.0001, help='learning rate for Critic, default=0.00005')
-parser.add_argument('--encoder', type=str, default='', help="path to encoder (to continue training)")
-parser.add_argument('--decoder', type=str, default='', help='path to decoder (to continue training)')
-parser.add_argument('--model', default='./model/', help='Where to store samples and models')
-parser.add_argument('--random_sample', default=True, action='store_true', help='whether to sample the dataset with random sampler')
-parser.add_argument('--teaching_forcing_prob', type=float, default=0.5, help='where to use teach forcing')
-parser.add_argument('--max_width', type=int, default=71, help='the width of the feature map out from cnn')
-cfg = parser.parse_args()
-print(cfg)
+# parser.add_argument('--train_list', type=str, default='../ocr_data/ocr_syn_text/image_text_index.txt', help='path to train dataset list file')
+# parser.add_argument('--eval_list', type=str, default='',  help='path to evalation dataset list file')
+# parser.add_argument('--num_workers', type=int, default=4, help='number of data loading num_workers')
+# parser.add_argument('--batch_size', type=int, default=16, help='input batch size')
+# parser.add_argument('--img_height', type=int, default=32, help='the height of the input image to network')
+# parser.add_argument('--img_width', type=int, default=280, help='the width of the input image to network')
+# parser.add_argument('--hidden_size', type=int, default=256, help='size of the lstm hidden state')
+# parser.add_argument('--num_epochs', type=int, default=100, help='number of epochs to train for')
+# parser.add_argument('--learning_rate', type=float, default=0.0001, help='learning rate for Critic, default=0.00005')
+# parser.add_argument('--encoder', type=str, default='', help="path to encoder (to continue training)")
+# parser.add_argument('--decoder', type=str, default='', help='path to decoder (to continue training)')
+# parser.add_argument('--model', default='./model/', help='Where to store samples and models')
+# parser.add_argument('--random_sample', default=True, action='store_true', help='whether to sample the dataset with random sampler')
+# parser.add_argument('--teaching_forcing_prob', type=float, default=0.5, help='where to use teach forcing')
+# parser.add_argument('--max_width', type=int, default=71, help='the width of the feature map out from cnn')
+# cfg = parser.parse_args()
+# print(cfg)
 
 # load alphabet
 # with open('./data/char_std_5990.txt') as f:

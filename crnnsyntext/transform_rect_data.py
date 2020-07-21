@@ -7,8 +7,12 @@ import numpy as np
 # import matplotlib.pyplot as plt
 from PIL import Image
 
-PRE_DATA_PATH = "../ocr_data/ReCTS"
-OUTPUT_PATH = "../ocr_data/ocr_syn_text"
+# for local
+# PRE_DATA_PATH = "../ocr_data/ReCTS"
+# OUTPUT_PATH = "../ocr_data/ocr_syn_text"
+# for remote sever
+PRE_DATA_PATH = "./data/ReCTS"
+OUTPUT_PATH = "./data/ocr_syn_text"
 
 PRE_IMAGE_PATH = 'img'
 PRE_GT_PATH = 'gt'
