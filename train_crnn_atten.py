@@ -10,12 +10,13 @@ import dataloader.utils as utils
 import dataloader.textline_dataset as dataset
 
 import models.seq2seq as crnn
-from parser import crnn_parser
+# from parser import crnn_parser
+import parser
 
 cudnn.benchmark = True
 
 # parser = argparse.ArgumentParser()
-cfg = crnn_parser()
+cfg = parser.crnn_parser()
 # parser.add_argument('--train_list', type=str, default='data/train_data_index.txt', help='path to train dataset list file')
 # parser.add_argument('--train_list', type=str, default='../ocr_data/ocr_syn_text/image_text_index.txt', help='path to train dataset list file')
 # parser.add_argument('--eval_list', type=str, default='',  help='path to evalation dataset list file')
@@ -37,7 +38,7 @@ cfg = crnn_parser()
 
 # load alphabet
 # with open('./data/char_std_5990.txt') as f:
-with open('../ocr_data/ocr_syn_text/char_ReCTS_4133.txt') as f:
+with open('./data/ReCTS/char_ReCTS_4133.txt') as f:
     data = f.readlines()
     alphabet = [x.rstrip() for x in data]
     alphabet = ''.join(alphabet)
