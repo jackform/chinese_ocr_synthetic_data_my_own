@@ -38,7 +38,7 @@ cfg = parser.crnn_parser()
 
 # load alphabet
 # with open('./data/char_std_5990.txt') as f:
-with open('./data/ReCTS/char_ReCTS_4133.txt') as f:
+with open('./crnnsyntext/char_ReCTS_4133.txt') as f:
     data = f.readlines()
     alphabet = [x.rstrip() for x in data]
     alphabet = ''.join(alphabet)

@@ -1,7 +1,7 @@
 class crnn_parser(object):
 
     def __init__(self):
-        self.train_list = '../ocr_data/ocr_syn_text/image_text_index.txt'
+        self.train_list = './crnnsyntext/image_text_index.txt'
         self.eval_list = ''
         self.num_workers = 4
         self.batch_size = 16
@@ -9,7 +9,7 @@ class crnn_parser(object):
         self.img_width = 280
         self.hidden_size = 256
         self.num_epochs = 100
-        self.learning_rate = 0.0001,
+        self.learning_rate = 0.0001
         self.encoder = ''
         self.decoder = ''
         self.model = './model/'

@@ -6,6 +6,7 @@ import random
 from PIL import Image
 import cv2
 import numpy as np
+import os
 
 
 class TextLineDataset(torch.utils.data.Dataset):
@@ -28,6 +29,8 @@ class TextLineDataset(torch.utils.data.Dataset):
         line_splits = self.lines[index].strip().split()
         img_path = line_splits[0]
         try:
+            # print(img_path)
+            img_path = os.path.join("/kaggle/input/ocr-syn-text/ocr_syn_text_data", img_path)
             if 'train' in self.text_line_file:
                 img = Image.open(img_path).convert('RGB')
             else:
