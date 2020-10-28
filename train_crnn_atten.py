@@ -78,16 +78,18 @@ def train(image, text, encoder, decoder, criterion, train_loader, teach_forcing_
             encoder_outputs = encoder(image)
             # print('================ encoder output ================')
             # print(encoder_outputs.size())
-            # target_variable = target_variable.cuda()
+            if torch.cuda.is_available():
+                target_variable = target_variable.cuda()
             # start decoder for SOS_TOKEN
-            # decoder_input = target_variable[utils.SOS_TOKEN].cuda()
-            # decoder_hidden = decoder.initHidden(batch_size).cuda()
+                decoder_input = target_variable[utils.SOS_TOKEN].cuda()
+                decoder_hidden = decoder.initHidden(batch_size).cuda()
             # print('================ target_variable ==================')
             # print(target_variable.size())
-            decoder_input = target_variable[utils.SOS_TOKEN]
+            else:
+                decoder_input = target_variable[utils.SOS_TOKEN]
             # print('================ decoder input ===================')
             # print(decoder_input)
-            decoder_hidden = decoder.initHidden(batch_size)
+                decoder_hidden = decoder.initHidden(batch_size)
             # print('================ hidden size =====================')
             # print(decoder_hidden.size())
             # print(decoder_hidden)
